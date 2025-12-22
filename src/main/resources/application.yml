@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ticket
+  data:
+    mongodb:
+      uri: mongodb+srv://dbapp:dbapp123@cluster0.whysklo.mongodb.net/db-system-ticket
+
+jwt:
+  secret: mysupersecretkey1234567890123456SUPERSECRET
+  expiration: 86400000
