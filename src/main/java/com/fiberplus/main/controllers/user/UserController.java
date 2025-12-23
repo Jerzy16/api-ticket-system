@@ -1,13 +1,17 @@
 package com.fiberplus.main.controllers.user;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fiberplus.main.common.ApiResponse;
+import com.fiberplus.main.common.ResponseBuilder;
 import com.fiberplus.main.dtos.UserDto;
-import com.fiberplus.main.response.ApiResponse;
 import com.fiberplus.main.services.UserService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("api/user")
@@ -20,9 +24,9 @@ public class UserController {
     }
 
     @PostMapping
-    public ApiResponse<UserDto> create(@RequestBody UserDto dto) {
+    public ResponseEntity<ApiResponse<UserDto>> create(@Valid @RequestBody UserDto dto) {
         _service.insert(dto);
-        return ApiResponse.success("Usuario creado correctamente", dto);
+        return ResponseBuilder.created("Usuario creado exitosamente", dto);
     }
 
 }
