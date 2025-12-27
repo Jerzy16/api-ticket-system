@@ -21,16 +21,23 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    @Value("${jwt.expiration-remember}")
+    private long expirationRemember;
+
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String userId, String email) {
+    public String generateToken(String userId, String email, boolean rememberMe) {
+
+        long expTime = rememberMe ? expirationRemember : expiration;
+
         return Jwts.builder()
                 .setSubject(userId)
                 .claim("email", email)
+                .claim("rememberMe", rememberMe) 
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .setExpiration(new Date(System.currentTimeMillis() + expTime))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

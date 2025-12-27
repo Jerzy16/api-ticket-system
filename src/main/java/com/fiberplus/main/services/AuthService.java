@@ -25,7 +25,7 @@ public class AuthService {
         this._jwtUtil = _jwtUtil;
     }
 
-    public AuthResponseDto login(String email, String password) {
+    public AuthResponseDto login(String email, String password, boolean remerberMe) {
 
         UserEntity user = _repo.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -37,7 +37,8 @@ public class AuthService {
 
         String token = _jwtUtil.generateToken(
                 user.getId(),
-                user.getEmail());
+                user.getEmail(),
+                remerberMe);
 
         return new AuthResponseDto(token);
     }

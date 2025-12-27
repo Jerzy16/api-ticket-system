@@ -32,7 +32,7 @@ public class AuthController {
     ) {
         return ResponseBuilder.ok(
                 "Login exitoso",
-                _auth.login(dto.getEmail(), dto.getPassword())
+                _auth.login(dto.getEmail(), dto.getPassword(), dto.isRememberMe())
         );
     }
     

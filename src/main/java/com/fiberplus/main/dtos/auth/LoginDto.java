@@ -14,4 +14,6 @@ public class LoginDto {
 
     @NotBlank(message = "La contraseña es un campo obligatorio")
     String password;
+
+    boolean rememberMe;
 }
