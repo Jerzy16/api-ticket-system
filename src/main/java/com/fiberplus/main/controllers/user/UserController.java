@@ -14,7 +14,7 @@ import com.fiberplus.main.services.UserService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("api/user")
+@RequestMapping("api/users")
 public class UserController {
 
     private final UserService _service;

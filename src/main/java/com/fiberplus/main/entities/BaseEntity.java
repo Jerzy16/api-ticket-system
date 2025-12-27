@@ -26,5 +26,4 @@ public abstract class BaseEntity {
     @Field("updated_at")
     private LocalDateTime updatedAt;
 
-    private boolean enabled = true;
 }

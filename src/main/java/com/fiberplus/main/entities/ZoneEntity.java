@@ -16,5 +16,4 @@ public class ZoneEntity extends BaseEntity {
     private String name;
     private String district;
     private String description;
-    private String status;
 }

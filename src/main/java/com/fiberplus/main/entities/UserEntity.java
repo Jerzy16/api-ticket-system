@@ -29,6 +29,10 @@ public class UserEntity extends BaseEntity implements UserDetails {
     private String email;
     @JsonIgnore
     private String password;
+    private String name;
+    private String lastname;
+    private String position;
+    private String photo;
     private Set<String> roles = new HashSet<>();
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

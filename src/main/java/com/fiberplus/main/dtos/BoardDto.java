@@ -1,22 +1,20 @@
-package com.fiberplus.main.entities;
+package com.fiberplus.main.dtos;
 
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-@Document(collection = "boards")
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
-public class BoardEntity extends BaseEntity {
+public class BoardDto extends BaseDto {
+    @NotBlank(message = "El campo titulo no puede estar vació.")
     private String title;
     private String createdBy;
     private String status;
-
 }

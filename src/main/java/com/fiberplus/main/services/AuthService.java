@@ -5,8 +5,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.fiberplus.main.dtos.AuthResponseDto;
 import com.fiberplus.main.dtos.UserDto;
+import com.fiberplus.main.dtos.auth.AuthResponseDto;
 import com.fiberplus.main.entities.UserEntity;
 import com.fiberplus.main.exception.ResourceNotFoundException;
 import com.fiberplus.main.repositories.IUserRepository;

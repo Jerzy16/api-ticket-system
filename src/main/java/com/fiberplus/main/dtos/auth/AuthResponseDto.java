@@ -1,4 +1,4 @@
-package com.fiberplus.main.dtos;
+package com.fiberplus.main.dtos.auth;
 
 public class AuthResponseDto {
     private String token;

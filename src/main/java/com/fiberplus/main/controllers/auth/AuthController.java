@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fiberplus.main.common.ApiResponse;
 import com.fiberplus.main.common.ResponseBuilder;
-import com.fiberplus.main.dtos.AuthResponseDto;
 import com.fiberplus.main.dtos.UserDto;
+import com.fiberplus.main.dtos.auth.AuthResponseDto;
 import com.fiberplus.main.dtos.auth.LoginDto;
 import com.fiberplus.main.services.AuthService;
 
