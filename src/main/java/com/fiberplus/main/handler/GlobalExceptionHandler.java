@@ -13,18 +13,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.fiberplus.main.common.ApiResponse;
 import com.fiberplus.main.common.ResponseBuilder;
 import com.fiberplus.main.exception.ConflictException;
+import com.fiberplus.main.exception.GenericException;
 import com.fiberplus.main.exception.ResourceNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
         return ResponseBuilder.build(
                 HttpStatus.NOT_FOUND.value(),
                 ex.getMessage(),
-                null
-        );
+                null);
     }
 
     @ExceptionHandler(ConflictException.class)
@@ -32,14 +32,12 @@ public class GlobalExceptionHandler {
         return ResponseBuilder.build(
                 HttpStatus.CONFLICT.value(),
                 ex.getMessage(),
-                null
-        );
+                null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(
-            MethodArgumentNotValidException ex
-    ) {
+            MethodArgumentNotValidException ex) {
         List<String> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -49,8 +47,7 @@ public class GlobalExceptionHandler {
         return ResponseBuilder.error(
                 HttpStatus.BAD_REQUEST.value(),
                 "Validación fallida",
-                errors
-        );
+                errors);
     }
 
     @ExceptionHandler(RuntimeException.class)
@@ -58,8 +55,15 @@ public class GlobalExceptionHandler {
         return ResponseBuilder.build(
                 HttpStatus.BAD_REQUEST.value(),
                 ex.getMessage(),
-                null
-        );
+                null);
+    }
+
+    @ExceptionHandler(GenericException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCodeExpired(GenericException ex) {
+        return ResponseBuilder.build(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                null);
     }
 
     @ExceptionHandler(Exception.class)
@@ -69,7 +73,6 @@ public class GlobalExceptionHandler {
         return ResponseBuilder.build(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Error interno del servidor",
-                null
-        );
+                null);
     }
 }
