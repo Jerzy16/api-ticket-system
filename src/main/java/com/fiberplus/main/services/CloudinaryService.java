@@ -1,9 +1,16 @@
 package com.fiberplus.main.services;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
+import com.cloudinary.Transformation;
+import com.cloudinary.utils.ObjectUtils;
+import com.fiberplus.main.dtos.CloudinaryResponseDto;
 import com.fiberplus.main.exception.GenericException;
 
 @Service
@@ -14,14 +21,7 @@ public class CloudinaryService {
         this.cloudinary = cloudinary;
     }
 
-    /**
-     * Sube una imagen a Cloudinary
-     * 
-     * @param file   Archivo a subir
-     * @param folder Carpeta en Cloudinary (opcional)
-     * @return Información del archivo subido
-     */
-    public CloudinaryResponseDTO uploadImage(MultipartFile file, String folder) {
+    public CloudinaryResponseDto uploadImage(MultipartFile file, String folder) {
         try {
             validateFile(file);
 
@@ -36,7 +36,8 @@ public class CloudinaryService {
                             "quality", "auto",
                             "fetch_format", "auto"));
 
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
 
             return mapToDTO(uploadResult);
 
@@ -45,16 +46,7 @@ public class CloudinaryService {
         }
     }
 
-    /**
-     * Sube una imagen con transformaciones específicas
-     * 
-     * @param file   Archivo a subir
-     * @param folder Carpeta en Cloudinary
-     * @param width  Ancho deseado
-     * @param height Alto deseado
-     * @return Información del archivo subido
-     */
-    public CloudinaryResponseDTO uploadImageWithTransformation(
+    public CloudinaryResponseDto uploadImageWithTransformation(
             MultipartFile file,
             String folder,
             Integer width,
@@ -76,7 +68,8 @@ public class CloudinaryService {
                             "quality", "auto",
                             "fetch_format", "auto"));
 
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
 
             return mapToDTO(uploadResult);
 
@@ -85,30 +78,20 @@ public class CloudinaryService {
         }
     }
 
-    /**
-     * Elimina una imagen de Cloudinary
-     * 
-     * @param publicId ID público del archivo en Cloudinary
-     * @return true si se eliminó correctamente
-     */
     public boolean deleteImage(String publicId) {
         try {
-            Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
             return "ok".equals(result.get("result"));
         } catch (IOException e) {
             throw new GenericException("Error al eliminar la imagen: " + e.getMessage());
         }
     }
 
-    /**
-     * Elimina múltiples imágenes de Cloudinary
-     * 
-     * @param publicIds Array de IDs públicos
-     * @return true si se eliminaron correctamente
-     */
     public boolean deleteImages(String[] publicIds) {
         try {
-            Map result = cloudinary.api().deleteResources(
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.api().deleteResources(
                     java.util.Arrays.asList(publicIds),
                     ObjectUtils.emptyMap());
             return result != null;
@@ -117,14 +100,7 @@ public class CloudinaryService {
         }
     }
 
-    /**
-     * Sube un archivo (PDF, documentos, etc.)
-     * 
-     * @param file   Archivo a subir
-     * @param folder Carpeta en Cloudinary
-     * @return Información del archivo subido
-     */
-    public CloudinaryResponseDTO uploadFile(MultipartFile file, String folder) {
+    public CloudinaryResponseDto uploadFile(MultipartFile file, String folder) {
         try {
             if (file.isEmpty()) {
                 throw new GenericException("El archivo está vacío");
@@ -138,7 +114,8 @@ public class CloudinaryService {
                     "resource_type", "raw",
                     "overwrite", true);
 
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
 
             return mapToDTO(uploadResult);
 
@@ -147,26 +124,18 @@ public class CloudinaryService {
         }
     }
 
-    /**
-     * Obtiene la URL optimizada de una imagen
-     * 
-     * @param publicId ID público del archivo
-     * @param width    Ancho deseado
-     * @param height   Alto deseado
-     * @return URL optimizada
-     */
     public String getOptimizedUrl(String publicId, Integer width, Integer height) {
+        Transformation transformation = new Transformation()
+                .width(width)
+                .height(height)
+                .crop("fill")
+                .quality("auto")
+                .fetchFormat("auto");
+
         return cloudinary.url()
-                .transformation(ObjectUtils.asMap(
-                        "width", width,
-                        "height", height,
-                        "crop", "fill",
-                        "quality", "auto",
-                        "fetch_format", "auto"))
+                .transformation(transformation)
                 .generate(publicId);
     }
-
-    // Métodos privados auxiliares
 
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
@@ -178,8 +147,7 @@ public class CloudinaryService {
             throw new GenericException("El archivo debe ser una imagen");
         }
 
-        // Validar tamaño (por ejemplo, máximo 10MB)
-        long maxSize = 10 * 1024 * 1024; // 10MB
+        long maxSize = 10 * 1024 * 1024;
         if (file.getSize() > maxSize) {
             throw new GenericException("El archivo excede el tamaño máximo permitido (10MB)");
         }
@@ -189,14 +157,14 @@ public class CloudinaryService {
         return UUID.randomUUID().toString();
     }
 
-    private CloudinaryResponseDTO mapToDTO(Map uploadResult) {
-        return CloudinaryResponseDTO.builder()
+    private CloudinaryResponseDto mapToDTO(Map<String, Object> uploadResult) {
+        return CloudinaryResponseDto.builder()
                 .publicId((String) uploadResult.get("public_id"))
                 .url((String) uploadResult.get("url"))
                 .secureUrl((String) uploadResult.get("secure_url"))
                 .format((String) uploadResult.get("format"))
                 .resourceType((String) uploadResult.get("resource_type"))
-                .bytes(((Number) uploadResult.get("bytes")).longValue())
+                .bytes(uploadResult.get("bytes") != null ? ((Number) uploadResult.get("bytes")).longValue() : null)
                 .width((Integer) uploadResult.get("width"))
                 .height((Integer) uploadResult.get("height"))
                 .build();
