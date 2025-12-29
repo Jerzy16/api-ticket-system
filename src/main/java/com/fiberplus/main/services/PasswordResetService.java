@@ -34,13 +34,14 @@ public class PasswordResetService {
         _userRepository.findByEmail(email)
                 .orElseThrow(() -> new GenericException("Este correo no existe"));
 
-        String code = String.format("%06d", new Random().nextInt(9999999));
+        String code = String.format("%06d", new Random().nextInt(999999));
         String id = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
         PasswordResetEntity passwordReset = PasswordResetEntity.builder()
                 .id(id)
                 .code(code)
+                .email(email)
                 .used(false)
                 .createdAt(now)
                 .expiresAt(LocalDateTime.now().plusMinutes(10))
