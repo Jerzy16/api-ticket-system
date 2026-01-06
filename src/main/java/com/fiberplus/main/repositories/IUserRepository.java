@@ -10,4 +10,11 @@ import com.fiberplus.main.entities.UserEntity;
 @Repository
 public interface IUserRepository extends MongoRepository<UserEntity, String> {
      Optional<UserEntity> findByEmail(String email);
+    
+    Optional<UserEntity> findByUsername(String username);
+    
+    boolean existsByRolesContaining(String role);
+    
+    long countByRolesContaining(String role);
+
 }
