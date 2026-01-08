@@ -1,7 +1,9 @@
 package com.fiberplus.main.services;
 
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException;
@@ -120,5 +122,61 @@ public class EmailService {
                 </body>
                 </html>
                 """.formatted(code);
+    }
+    @Async
+    public void sendTaskAssignmentEmail(String toEmail, String userName, String taskTitle, String taskDescription) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Nueva tarea asignada: " + taskTitle);
+        message.setText(String.format(
+            "Hola %s,\n\n" +
+            "Se te ha asignado una nueva tarea:\n\n" +
+            "Título: %s\n" +
+            "Descripción: %s\n\n" +
+            "Por favor, revisa los detalles en la plataforma.\n\n" +
+            "Saludos,\n" +
+            "Sistema de Gestión de Tareas",
+            userName, taskTitle, taskDescription != null ? taskDescription : "Sin descripción"
+        ));
+        
+        mailSender.send(message);
+    }
+    
+    @Async
+    public void sendTaskUpdateEmail(String toEmail, String userName, String taskTitle, String changes) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Tarea actualizada: " + taskTitle);
+        message.setText(String.format(
+            "Hola %s,\n\n" +
+            "Una tarea asignada a ti ha sido actualizada:\n\n" +
+            "Título: %s\n" +
+            "Cambios: %s\n\n" +
+            "Por favor, revisa los detalles en la plataforma.\n\n" +
+            "Saludos,\n" +
+            "Sistema de Gestión de Tareas",
+            userName, taskTitle, changes
+        ));
+        
+        mailSender.send(message);
+    }
+    
+    @Async
+    public void sendTaskMovedEmail(String toEmail, String userName, String taskTitle, String newBoard) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Tarea movida: " + taskTitle);
+        message.setText(String.format(
+            "Hola %s,\n\n" +
+            "Una tarea asignada a ti ha sido movida:\n\n" +
+            "Título: %s\n" +
+            "Nuevo tablero: %s\n\n" +
+            "Por favor, revisa los detalles en la plataforma.\n\n" +
+            "Saludos,\n" +
+            "Sistema de Gestión de Tareas",
+            userName, taskTitle, newBoard
+        ));
+        
+        mailSender.send(message);
     }
 }
