@@ -7,7 +7,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.fiberplus.main.dtos.TaskDto;
-import com.fiberplus.main.dtos.UserDto;
 import com.fiberplus.main.entities.TaskEntity;
 import com.fiberplus.main.repositories.ITaskRepository;
 
@@ -23,10 +22,7 @@ public class TaskService {
         String id = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
-        List<String> assignedUserIds = dto.getAssignedTo()
-        .stream()
-        .map(UserDto::getId)
-        .toList();
+        List<String> assignedUserIds = dto.getAssignedTo();
 
         TaskEntity task = TaskEntity.builder()
                 .id(id)
@@ -36,6 +32,8 @@ public class TaskService {
                 .boardId(dto.getBoardId())
                 .assignedTo(assignedUserIds)
                 .dueDate(dto.getDueDate())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
@@ -43,14 +41,17 @@ public class TaskService {
         task = _repo.save(task);
 
         return TaskDto.builder()
-        .id(task.getId())
-        .title(task.getTitle())
-        .description(task.getDescription())
-        .priority(task.getPriority())
-        .assignedTo(dto.getAssignedTo())
-        .dueDate(dto.getDueDate())
-        .build();
-
+                .id(task.getId())
+                .title(task.getTitle())
+                .description(task.getDescription())
+                .priority(task.getPriority())
+                .boardId(task.getBoardId())
+                .assignedTo(task.getAssignedTo()) 
+                .dueDate(task.getDueDate())
+                .latitude(task.getLatitude())
+                .longitude(task.getLongitude())
+                .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
+                .build();
     }
-
 }

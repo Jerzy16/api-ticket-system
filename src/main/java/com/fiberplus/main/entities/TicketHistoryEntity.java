@@ -6,14 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import tools.jackson.core.ObjectReadContext.Base;
 
 @Document(collection = "ticket_history")
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class TicketHistoryEntity extends Base {
+public class TicketHistoryEntity{
      private String ticketId;
     private String action; // CREATED | MOVED | ASSIGNED | CLOSED
 

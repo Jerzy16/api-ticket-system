@@ -9,8 +9,9 @@ import com.fiberplus.main.common.ResponseBuilder;
 import com.fiberplus.main.dtos.TaskDto;
 import com.fiberplus.main.services.TaskService;
 
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("api/tasks")
@@ -22,6 +23,7 @@ public class TaskController {
         this._service = _service;
     }
 
+    @PostMapping
     public ResponseEntity<ApiResponse<TaskDto>> create(@Valid @RequestBody TaskDto dto) {
         _service.createTask(dto);
         return ResponseBuilder.created("Tarea creada exitosamente", dto);

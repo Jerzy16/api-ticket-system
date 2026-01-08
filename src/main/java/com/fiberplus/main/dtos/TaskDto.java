@@ -3,7 +3,7 @@ package com.fiberplus.main.dtos;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,14 +16,24 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @SuperBuilder
 public class TaskDto extends BaseDto {
-    @NotNull(message = "El campo titulo es obligatorio")
+    @NotBlank(message = "El título de la tarea no puede estar vacío.")
     private String title;
-    @NotNull(message = "La descripcion es obligatoria")
+    
     private String description;
-    @NotNull(message = "La prioridad es obligatoria")
-    private String priority;
-    @NotNull(message = "La pizarra es obligatoria")
-    private String boardId;
-    private List<UserDto> assignedTo;
+    
+    private List<String> assignedTo;
+    
+    private String priority; 
+    
     private LocalDateTime dueDate;
+    
+    private String latitude;
+    
+    private String longitude;
+    
+    private String boardId;
+    
+    private String status;
+    
+    private Integer position; 
 }
