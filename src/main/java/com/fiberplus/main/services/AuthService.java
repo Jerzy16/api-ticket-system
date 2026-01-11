@@ -64,7 +64,12 @@ public class AuthService {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
-
+        dto.setUsername(user.getUsername());
+        dto.setName(user.getName());
+        dto.setLastName(user.getLastname());
+        dto.setPhoto(user.getPhoto());
+        dto.setPosition(user.getPosition());
+        dto.setRoles(user.getRoles());
         return dto;
     }
 

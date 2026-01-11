@@ -7,9 +7,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.fiberplus.main.dtos.CloudinaryResponseDto;
 import com.fiberplus.main.dtos.TeamGroupDto;
 import com.fiberplus.main.dtos.TeamMemberDto;
 import com.fiberplus.main.dtos.UserDto;
@@ -21,12 +25,20 @@ import com.fiberplus.main.repositories.IUserRepository;
 @Service
 public class UserService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    
     private final IUserRepository _repo;
     private final PasswordEncoder _passwordEncoder;
+    private final CloudinaryService _cloudinaryService;
+    
+    private static final String PROFILE_PHOTOS_FOLDER = "fiberplus/profiles";
 
-    public UserService(IUserRepository _repo, PasswordEncoder _passwordEncoder) {
+    public UserService(IUserRepository _repo, 
+                      PasswordEncoder _passwordEncoder,
+                      CloudinaryService _cloudinaryService) {
         this._repo = _repo;
         this._passwordEncoder = _passwordEncoder;
+        this._cloudinaryService = _cloudinaryService;
     }
 
     public UserDto insert(UserDto dto) {
@@ -42,17 +54,7 @@ public class UserService {
                             "El usuario con el username '" + dto.getUsername() + "' ya existe.");
                 });
 
-        if (dto.getRoles() == null || dto.getRoles().isEmpty()) {
-            throw new GenericException("Debe asignarse al menos un rol");
-        }
-
-        Set<String> allowedRoles = Set.of("SUPERADMIN", "ADMIN", "USER", "TECH");
-
-        for (String role : dto.getRoles()) {
-            if (!allowedRoles.contains(role)) {
-                throw new GenericException("Rol no válido: " + role);
-            }
-        }
+        validateRoles(dto.getRoles());
 
         if (dto.getRoles().contains("SUPERADMIN")) {
             boolean superAdminExists = _repo.existsByRolesContaining("SUPERADMIN");
@@ -73,11 +75,13 @@ public class UserService {
         user.setPassword(_passwordEncoder.encode(dto.getPassword()));
         user.setRoles(dto.getRoles());
         user.setPosition(dto.getPosition());
-        user.setPhoto(dto.getPhoto());
+        user.setPhoto(dto.getPhoto() != null ? dto.getPhoto() : getDefaultPhoto());
         user.setCreatedAt(date);
         user.setUpdatedAt(date);
 
         UserEntity savedUser = _repo.save(user);
+        
+        logger.info("Usuario creado exitosamente: {}", savedUser.getUsername());
 
         return mapToDto(savedUser);
     }
@@ -102,17 +106,7 @@ public class UserService {
                     });
         }
 
-        if (dto.getRoles() == null || dto.getRoles().isEmpty()) {
-            throw new GenericException("Debe asignarse al menos un rol");
-        }
-
-        Set<String> allowedRoles = Set.of("SUPERADMIN", "ADMIN", "USER", "TECH");
-
-        for (String role : dto.getRoles()) {
-            if (!allowedRoles.contains(role)) {
-                throw new GenericException("Rol no válido: " + role);
-            }
-        }
+        validateRoles(dto.getRoles());
 
         user.setUsername(dto.getUsername());
         user.setName(dto.getName());
@@ -125,13 +119,95 @@ public class UserService {
         
         user.setRoles(dto.getRoles());
         user.setPosition(dto.getPosition());
-        user.setPhoto(dto.getPhoto());
+
+        if (dto.getPhoto() != null && !dto.getPhoto().isEmpty()) {
+            user.setPhoto(dto.getPhoto());
+        }
+        
         user.setUpdatedAt(LocalDateTime.now());
 
         UserEntity updatedUser = _repo.save(user);
+        
+        logger.info("Usuario actualizado exitosamente: {}", updatedUser.getUsername());
 
         return mapToDto(updatedUser);
     }
+
+    public UserDto uploadProfilePhoto(String userId, MultipartFile file) {
+        UserEntity user = _repo.findById(userId)
+                .orElseThrow(() -> new GenericException("Usuario no encontrado"));
+
+        if (user.getPhoto() != null && !user.getPhoto().contains("ui-avatars.com")) {
+            try {
+                String oldPublicId = extractPublicIdFromUrl(user.getPhoto());
+                if (oldPublicId != null) {
+                    _cloudinaryService.deleteImage(oldPublicId);
+                    logger.info("Foto anterior eliminada: {}", oldPublicId);
+                }
+            } catch (Exception e) {
+                logger.warn("No se pudo eliminar la foto anterior: {}", e.getMessage());
+            }
+        }
+
+        CloudinaryResponseDto uploadResult = _cloudinaryService.uploadImageWithTransformation(
+            file, 
+            PROFILE_PHOTOS_FOLDER, 
+            400, 
+            400
+        );
+
+        user.setPhoto(uploadResult.getSecureUrl());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        UserEntity updatedUser = _repo.save(user);
+        
+        logger.info("Foto de perfil actualizada para usuario: {}", updatedUser.getUsername());
+
+        return mapToDto(updatedUser);
+    }
+
+    public UserDto deleteProfilePhoto(String userId) {
+        UserEntity user = _repo.findById(userId)
+                .orElseThrow(() -> new GenericException("Usuario no encontrado"));
+
+        if (user.getPhoto() != null && !user.getPhoto().contains("ui-avatars.com")) {
+            try {
+                String publicId = extractPublicIdFromUrl(user.getPhoto());
+                if (publicId != null) {
+                    _cloudinaryService.deleteImage(publicId);
+                    logger.info("Foto de perfil eliminada: {}", publicId);
+                }
+            } catch (Exception e) {
+                logger.warn("No se pudo eliminar la foto de Cloudinary: {}", e.getMessage());
+            }
+        }
+
+        user.setPhoto(getDefaultPhoto());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        UserEntity updatedUser = _repo.save(user);
+        
+        logger.info("Foto de perfil restablecida a default para usuario: {}", updatedUser.getUsername());
+
+        return mapToDto(updatedUser);
+    }
+
+    public void updatePassword(String userId, String currentPassword, String newPassword) {
+        UserEntity user = _repo.findById(userId)
+                .orElseThrow(() -> new GenericException("Usuario no encontrado"));
+
+        if (!_passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new GenericException("La contraseña actual es incorrecta");
+        }
+
+        user.setPassword(_passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+
+        _repo.save(user);
+        
+        logger.info("Contraseña actualizada para usuario: {}", user.getUsername());
+    }
+
 
     public void delete(String id) {
         UserEntity user = _repo.findById(id)
@@ -144,7 +220,36 @@ public class UserService {
             }
         }
 
+        if (user.getPhoto() != null && !user.getPhoto().contains("ui-avatars.com")) {
+            try {
+                String publicId = extractPublicIdFromUrl(user.getPhoto());
+                if (publicId != null) {
+                    _cloudinaryService.deleteImage(publicId);
+                    logger.info("Foto de perfil eliminada al borrar usuario: {}", publicId);
+                }
+            } catch (Exception e) {
+                logger.warn("No se pudo eliminar la foto al borrar usuario: {}", e.getMessage());
+            }
+        }
+
         _repo.delete(user);
+        
+        logger.info("Usuario eliminado: {}", user.getUsername());
+    }
+
+    public UserDto getById(String id) {
+        UserEntity user = _repo.findById(id)
+                .orElseThrow(() -> new GenericException("Usuario no encontrado"));
+        
+        return mapToDto(user);
+    }
+
+    public List<UserDto> getAll() {
+        List<UserEntity> users = _repo.findAll();
+        
+        return users.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
     public List<TeamGroupDto> getTeam() {
@@ -157,8 +262,12 @@ public class UserService {
                         Collectors.mapping(user -> {
                             TeamMemberDto dto = new TeamMemberDto();
                             dto.setId(user.getId());
-                            dto.setName(buildFullName(user));
+                            dto.setName(user.getName());
+                            dto.setEmail(user.getEmail());
+                            dto.setUsername(user.getUsername());
+                            dto.setLastName(user.getLastname());
                             dto.setPost(user.getPosition());
+                            dto.setRoles(user.getRoles());
                             dto.setPhoto(user.getPhoto() != null ? user.getPhoto() : getDefaultPhoto());
                             return dto;
                         }, Collectors.toList())));
@@ -173,30 +282,51 @@ public class UserService {
                 .toList();
     }
 
-    private String buildFullName(UserEntity user) {
-        StringBuilder name = new StringBuilder();
-        
-        if (user.getName() != null && !user.getName().trim().isEmpty()) {
-            name.append(user.getName().trim());
+    private void validateRoles(Set<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            throw new GenericException("Debe asignarse al menos un rol");
         }
-        
-        if (user.getLastname() != null && !user.getLastname().trim().isEmpty()) {
-            if (name.length() > 0) {
-                name.append(" ");
+
+        Set<String> allowedRoles = Set.of("SUPERADMIN", "ADMIN", "USER", "TECH");
+
+        for (String role : roles) {
+            if (!allowedRoles.contains(role)) {
+                throw new GenericException("Rol no válido: " + role);
             }
-            name.append(user.getLastname().trim());
         }
-        
-        if (name.length() == 0) {
-            if (user.getUsername() != null && !user.getUsername().trim().isEmpty()) {
-                return user.getUsername();
-            } else if (user.getEmail() != null) {
-                return user.getEmail().split("@")[0];
+    }
+
+    private String extractPublicIdFromUrl(String url) {
+        try {
+            if (url == null || !url.contains("cloudinary.com")) {
+                return null;
             }
-            return "Usuario sin nombre";
+
+            int uploadIndex = url.indexOf("/upload/");
+            if (uploadIndex == -1) {
+                return null;
+            }
+
+            String afterUpload = url.substring(uploadIndex + 8); 
+            
+            if (afterUpload.startsWith("v")) {
+                int slashIndex = afterUpload.indexOf("/");
+                if (slashIndex != -1) {
+                    afterUpload = afterUpload.substring(slashIndex + 1);
+                }
+            }
+
+            int lastDotIndex = afterUpload.lastIndexOf(".");
+            if (lastDotIndex != -1) {
+                afterUpload = afterUpload.substring(0, lastDotIndex);
+            }
+
+            return afterUpload;
+            
+        } catch (Exception e) {
+            logger.error("Error al extraer publicId de URL: {}", url, e);
+            return null;
         }
-        
-        return name.toString();
     }
 
     private String getDefaultPhoto() {

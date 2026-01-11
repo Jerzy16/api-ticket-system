@@ -180,7 +180,7 @@ public class TaskService {
         
         task.setUpdatedAt(LocalDateTime.now());
         task = taskRepo.save(task);
-        
+
         if (changes.length() > 0) {
             String currentUserId = getCurrentUserId();
             List<String> currentAssignedUsers = task.getAssignedTo() != null ? task.getAssignedTo() : new ArrayList<>();
@@ -224,7 +224,7 @@ public class TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No se encontró el tablero con id ", "id", moveDto.getToBoardId()));
 
-        String previousBoardId = task.getBoardId();
+        //String previousBoardId = task.getBoardId();
         task.setBoardId(moveDto.getToBoardId());
         task.setUpdatedAt(LocalDateTime.now());
         

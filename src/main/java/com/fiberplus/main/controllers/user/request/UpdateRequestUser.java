@@ -1,4 +1,4 @@
-package com.fiberplus.main.dtos;
+package com.fiberplus.main.controllers.user.request;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -20,7 +20,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
-public class UserDto extends BaseDto {
+public class UpdateRequestUser {
     @NotBlank(message = "El nombre de usuario es obligatorio")
     @Size(min = 4, max = 30, message = "El nombre de usuario debe tener entre 4 y 30 caracteres")
     @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "El nombre de usuario solo puede contener letras, números y . _ -")
@@ -39,11 +39,6 @@ public class UserDto extends BaseDto {
     @Size(max = 100, message = "El correo electrónico no puede exceder 100 caracteres")
     private String email;
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$", message = "La contraseña debe contener al menos una mayúscula, una minúscula y un número")
-    private String password;
-
     @NotNull(message = "El cargo es obligatorio")
     @NotBlank(message = "El cargo no puede estar vacío")
     @Size(max = 50, message = "El cargo no puede exceder 50 caracteres")
@@ -56,5 +51,4 @@ public class UserDto extends BaseDto {
     @NotEmpty(message = "Debe especificar al menos un rol")
     private Set<String> roles = new HashSet<>();
 
-    private String jwtToken;
 }
