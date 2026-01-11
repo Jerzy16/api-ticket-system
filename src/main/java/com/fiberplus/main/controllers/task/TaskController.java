@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.*;
 
 import com.fiberplus.main.common.ApiResponse;
 import com.fiberplus.main.common.ResponseBuilder;
+import com.fiberplus.main.controllers.task.request.TaskMoveDto;
 import com.fiberplus.main.dtos.TaskDto;
-import com.fiberplus.main.dtos.TaskMoveDto;
 import com.fiberplus.main.dtos.TaskUpdateDto;
 import com.fiberplus.main.services.BoardWebSocketService;
 import com.fiberplus.main.services.TaskService;
@@ -49,13 +49,23 @@ public class TaskController {
 
     @PatchMapping("/{id}/move")
     @Operation(summary = "Mover tarea a otro tablero", description = "Actualiza el boardId de una tarea para moverla a otro estado")
-    public ResponseEntity<ApiResponse<TaskDto>> moveTask(@PathVariable String id,
-            @RequestParam String fromBoardId,
-            @RequestParam String toBoardId,
-            @RequestParam(required = false, defaultValue = "0") Integer newIndex) {
-        TaskDto movedTask = service.moveTask(id, fromBoardId, toBoardId, newIndex);
+    public ResponseEntity<ApiResponse<TaskDto>> moveTask(
+            @Parameter(description = "ID de la tarea a mover", required = true) @PathVariable String id,
+            @Valid @RequestBody TaskMoveDto moveDto) {
 
-        _boardWebSocket.notifyTaskMoved(id, fromBoardId, toBoardId, newIndex, movedTask);
+        TaskDto movedTask = service.moveTask(
+                id,
+                moveDto.getFromBoardId(),
+                moveDto.getToBoardId(),
+                moveDto.getNewIndex());
+
+        _boardWebSocket.notifyTaskMoved(
+                id,
+                moveDto.getFromBoardId(),
+                moveDto.getToBoardId(),
+                moveDto.getNewIndex(),
+                movedTask);
+
         return ResponseBuilder.ok("Tarea movida exitosamente", movedTask);
     }
 }
