@@ -14,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class TicketHistoryEntity{
      private String ticketId;
-    private String action; // CREATED | MOVED | ASSIGNED | CLOSED
+    private String action; 
 
     private String fromColumn;
     private String toColumn;

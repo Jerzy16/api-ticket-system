@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +24,16 @@ import com.fiberplus.main.repositories.IUserRepository;
 
 @Service
 public class TaskService {
-   private final ITaskRepository taskRepo;
+    private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
+    
+    private final ITaskRepository taskRepo;
     private final IBoardRepository boardRepo;
     private final IUserRepository userRepo;
     private final NotificationService notificationService;
     private final EmailService emailService;
 
-    public TaskService(ITaskRepository taskRepo, IBoardRepository boardRepo, IUserRepository userRepo, NotificationService notificationService, EmailService emailService) {
+    public TaskService(ITaskRepository taskRepo, IBoardRepository boardRepo, IUserRepository userRepo, 
+                      NotificationService notificationService, EmailService emailService) {
         this.taskRepo = taskRepo;
         this.boardRepo = boardRepo;
         this.userRepo = userRepo;
@@ -57,6 +62,7 @@ public class TaskService {
                 .build();
         
         task = taskRepo.save(task);
+        logger.info("✅ Tarea creada: {} en board {}", task.getId(), task.getBoardId());
 
         String currentUserId = getCurrentUserId();
         
@@ -82,7 +88,7 @@ public class TaskService {
                     );
                 }
             } catch (Exception e) {
-                System.err.println("Error enviando notificación/email a usuario " + userId + ": " + e.getMessage());
+                logger.error("Error enviando notificación/email a usuario {}: {}", userId, e.getMessage());
             }
         }
 
@@ -173,13 +179,14 @@ public class TaskService {
                         );
                     }
                 } catch (Exception e) {
-                    System.err.println("Error enviando notificación/email a usuario " + userId + ": " + e.getMessage());
+                    logger.error("Error enviando notificación/email a usuario {}: {}", userId, e.getMessage());
                 }
             }
         }
         
         task.setUpdatedAt(LocalDateTime.now());
         task = taskRepo.save(task);
+        logger.info("✅ Tarea actualizada: {}", task.getId());
 
         if (changes.length() > 0) {
             String currentUserId = getCurrentUserId();
@@ -207,7 +214,7 @@ public class TaskService {
                         );
                     }
                 } catch (Exception e) {
-                    System.err.println("Error enviando notificación/email a usuario " + userId + ": " + e.getMessage());
+                    logger.error("Error enviando notificación/email a usuario {}: {}", userId, e.getMessage());
                 }
             }
         }
@@ -215,20 +222,24 @@ public class TaskService {
         return entityToDto(task);
     }
 
-    public TaskDto moveTask(String taskId, TaskMoveDto moveDto) {
+    public TaskDto moveTask(String taskId, String fromBoardId, String toBoardId, Integer newIndex) {
+        logger.info("🔄 Moviendo tarea {} de board {} a board {} (índice: {})", 
+                   taskId, fromBoardId, toBoardId, newIndex);
+        
         TaskEntity task = taskRepo.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No se encontró la tarea con id ", "id", taskId));
 
-        boardRepo.findById(moveDto.getToBoardId())
+        boardRepo.findById(toBoardId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "No se encontró el tablero con id ", "id", moveDto.getToBoardId()));
+                        "No se encontró el tablero con id ", "id", toBoardId));
 
-        //String previousBoardId = task.getBoardId();
-        task.setBoardId(moveDto.getToBoardId());
+        task.setBoardId(toBoardId);
         task.setUpdatedAt(LocalDateTime.now());
         
         task = taskRepo.save(task);
+        
+        logger.info("✅ Tarea {} movida exitosamente al board {}", taskId, toBoardId);
 
         String currentUserId = getCurrentUserId();
         List<String> assignedUsers = task.getAssignedTo() != null ? task.getAssignedTo() : new ArrayList<>();
@@ -251,11 +262,11 @@ public class TaskService {
                         user.getEmail(),
                         user.getName(),
                         task.getTitle(),
-                        moveDto.getToBoardId()
+                        toBoardId
                     );
                 }
             } catch (Exception e) {
-                System.err.println("Error enviando notificación/email a usuario " + userId + ": " + e.getMessage());
+                logger.error("Error enviando notificación/email a usuario {}: {}", userId, e.getMessage());
             }
         }
 
