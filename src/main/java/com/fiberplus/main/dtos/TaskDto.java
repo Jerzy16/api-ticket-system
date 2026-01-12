@@ -22,6 +22,8 @@ public class TaskDto extends BaseDto {
     private String description;
     
     private List<String> assignedTo;
+
+    private List<UserDto> assignedUsers;
     
     private String priority; 
     

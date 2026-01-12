@@ -12,22 +12,27 @@ import org.springframework.stereotype.Service;
 import com.fiberplus.main.dtos.BoardDto;
 import com.fiberplus.main.dtos.BoardWithTasksDto;
 import com.fiberplus.main.dtos.TaskDto;
+import com.fiberplus.main.dtos.UserDto;
 import com.fiberplus.main.entities.BoardEntity;
 import com.fiberplus.main.entities.TaskEntity;
+import com.fiberplus.main.entities.UserEntity;
 import com.fiberplus.main.exception.ConflictException;
 import com.fiberplus.main.exception.ResourceNotFoundException;
 import com.fiberplus.main.repositories.IBoardRepository;
 import com.fiberplus.main.repositories.ITaskRepository;
+import com.fiberplus.main.repositories.IUserRepository;
 
 @Service
 public class BoardService {
 
     private final IBoardRepository _repo;
     private final ITaskRepository _taskRepo;
+    private final IUserRepository _userRepo;
 
-    public BoardService(IBoardRepository _repo, ITaskRepository _taskRepo) {
+    public BoardService(IBoardRepository _repo, ITaskRepository _taskRepo, IUserRepository _userRepo) {
         this._repo = _repo;
         this._taskRepo = _taskRepo;
+        this._userRepo = _userRepo;
     }
 
     private String getCurrentUserId() {
@@ -77,7 +82,32 @@ public class BoardService {
                 .build();
     }
 
+    private UserDto userToDto(UserEntity user) {
+        return UserDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .name(user.getName())
+                .lastName(user.getLastname())
+                .email(user.getEmail())
+                .position(user.getPosition())
+                .photo(user.getPhoto())
+                .roles(user.getRoles())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
+
     private TaskDto taskToDto(TaskEntity task) {
+        List<UserDto> assignedUsers = null;
+        
+        if (task.getAssignedTo() != null && !task.getAssignedTo().isEmpty()) {
+            assignedUsers = task.getAssignedTo().stream()
+                    .map(userId -> _userRepo.findById(userId).orElse(null))
+                    .filter(user -> user != null)
+                    .map(this::userToDto)
+                    .collect(Collectors.toList());
+        }
+
         return TaskDto.builder()
                 .id(task.getId())
                 .title(task.getTitle())
@@ -85,6 +115,7 @@ public class BoardService {
                 .priority(task.getPriority())
                 .boardId(task.getBoardId())
                 .assignedTo(task.getAssignedTo())
+                .assignedUsers(assignedUsers)
                 .dueDate(task.getDueDate())
                 .latitude(task.getLatitude())
                 .longitude(task.getLongitude())

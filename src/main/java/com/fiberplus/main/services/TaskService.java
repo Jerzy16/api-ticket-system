@@ -12,7 +12,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.fiberplus.main.dtos.TaskDto;
-import com.fiberplus.main.dtos.TaskMoveDto;
 import com.fiberplus.main.dtos.TaskUpdateDto;
 import com.fiberplus.main.entities.TaskEntity;
 import com.fiberplus.main.entities.UserEntity;
