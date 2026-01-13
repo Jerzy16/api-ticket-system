@@ -26,4 +26,7 @@ public class TaskEntity extends BaseEntity {
     private String longitude;
     private List<String> assignedTo;
     private LocalDateTime dueDate;
+
+    private String status; 
+    private LocalDateTime closedAt; 
 }
