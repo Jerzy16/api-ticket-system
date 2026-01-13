@@ -23,15 +23,12 @@ import lombok.experimental.SuperBuilder;
 public class UpdateRequestUser {
     @NotBlank(message = "El nombre de usuario es obligatorio")
     @Size(min = 4, max = 30, message = "El nombre de usuario debe tener entre 4 y 30 caracteres")
-    @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "El nombre de usuario solo puede contener letras, números y . _ -")
     private String username;
 
     @NotBlank(message = "El nombre es obligatorio")
-    @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "El nombre de usuario solo puede contener letras, números y . _ -")
     private String name;
 
     @NotBlank(message = "El apellido de usuario es obligatorio")
-    @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "El nombre de usuario solo puede contener letras, números y . _ -")
     private String lastName;
 
     @NotBlank(message = "El correo electrónico es obligatorio")
