@@ -3,6 +3,7 @@ package com.fiberplus.main.repositories;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
@@ -16,4 +17,5 @@ public interface ITaskCompletionRepository extends MongoRepository<TaskCompletio
     List<TaskCompletionEntity> findByCompletedBy(String userId);
     List<TaskCompletionEntity> findByCompletedAtBetween(LocalDateTime start, LocalDateTime end);
     Optional<TaskCompletionEntity> findFirstByTaskIdOrderByCompletedAtDesc(String taskId);
+    List<TaskCompletionEntity> findByTaskIdIn(Set<String> taskIds);
 }

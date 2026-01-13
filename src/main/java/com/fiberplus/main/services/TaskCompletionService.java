@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import com.fiberplus.main.controllers.task.request.TaskCompletionCreateDto;
 import com.fiberplus.main.dtos.TaskCompletionDto;
 import com.fiberplus.main.entities.TaskCompletionEntity;
+import com.fiberplus.main.entities.TaskEntity;
 import com.fiberplus.main.entities.UserEntity;
 import com.fiberplus.main.exception.ResourceNotFoundException;
 import com.fiberplus.main.repositories.ITaskCompletionRepository;
@@ -21,21 +22,21 @@ import com.fiberplus.main.repositories.IUserRepository;
 
 @Service
 public class TaskCompletionService {
-     private static final Logger logger = LoggerFactory.getLogger(TaskCompletionService.class);
-    
+    private static final Logger logger = LoggerFactory.getLogger(TaskCompletionService.class);
+
     private final ITaskCompletionRepository completionRepo;
     private final ITaskRepository taskRepo;
     private final IUserRepository userRepo;
 
-    public TaskCompletionService(ITaskCompletionRepository completionRepo, ITaskRepository taskRepo, IUserRepository userRepo) {
+    public TaskCompletionService(ITaskCompletionRepository completionRepo, ITaskRepository taskRepo,
+            IUserRepository userRepo) {
         this.completionRepo = completionRepo;
         this.taskRepo = taskRepo;
         this.userRepo = userRepo;
     }
 
     public TaskCompletionDto createCompletion(TaskCompletionCreateDto dto) {
-        // Verificar que la tarea existe
-        taskRepo.findById(dto.getTaskId())
+        TaskEntity task = taskRepo.findById(dto.getTaskId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No se encontró la tarea con id ", "id", dto.getTaskId()));
 
@@ -46,7 +47,7 @@ public class TaskCompletionService {
         TaskCompletionEntity completion = TaskCompletionEntity.builder()
                 .id(id)
                 .taskId(dto.getTaskId())
-                .boardId(dto.getBoardId())
+                .boardId(task.getBoardId())
                 .completedBy(userId)
                 .description(dto.getDescription())
                 .notes(dto.getNotes())
@@ -56,7 +57,13 @@ public class TaskCompletionService {
                 .build();
 
         completion = completionRepo.save(completion);
-        logger.info("✅ Completación de tarea creada: {} para tarea {}", completion.getId(), dto.getTaskId());
+
+        task.setStatus("CERRADO");
+        task.setClosedAt(now);
+        taskRepo.save(task);
+
+        logger.info("✅ Completación de tarea creada: {} para tarea {}",
+                completion.getId(), dto.getTaskId());
 
         return toDto(completion);
     }

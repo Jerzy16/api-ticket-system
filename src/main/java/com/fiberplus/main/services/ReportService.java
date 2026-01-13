@@ -25,18 +25,17 @@ import com.fiberplus.main.repositories.ITaskCompletionRepository;
 import com.fiberplus.main.repositories.ITaskRepository;
 import com.fiberplus.main.repositories.IUserRepository;
 
-
 @Service
 public class ReportService {
     private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
-    
+
     private final ITaskRepository taskRepo;
     private final ITaskCompletionRepository completionRepo;
     private final IBoardRepository boardRepo;
     private final IUserRepository userRepo;
 
-    public ReportService(ITaskRepository taskRepo, IBoardRepository boardRepo, 
-                        ITaskCompletionRepository completionRepo, IUserRepository userRepo) {
+    public ReportService(ITaskRepository taskRepo, IBoardRepository boardRepo,
+            ITaskCompletionRepository completionRepo, IUserRepository userRepo) {
         this.taskRepo = taskRepo;
         this.completionRepo = completionRepo;
         this.userRepo = userRepo;
@@ -45,25 +44,31 @@ public class ReportService {
 
     public ReportDto generateReport(LocalDateTime startDate, LocalDateTime endDate, String reportType) {
         logger.info("📊 Generando reporte {} para {}-{}", reportType, startDate, endDate);
-        
-        List<TaskCompletionEntity> completions = completionRepo.findByCompletedAtBetween(startDate, endDate);
+
+        // Obtener todas las tareas
         List<TaskEntity> allTasks = taskRepo.findAll();
-        
-        Set<String> completedTaskIds = completions.stream()
-                .map(TaskCompletionEntity::getTaskId)
-                .collect(Collectors.toSet());
-        
+
+        // Filtrar tareas CERRADAS en el rango de fechas
         List<TaskEntity> completedTasks = allTasks.stream()
-                .filter(task -> completedTaskIds.contains(task.getId()))
+                .filter(task -> "CERRADO".equals(task.getStatus()))
+                .filter(task -> task.getClosedAt() != null
+                        && !task.getClosedAt().isBefore(startDate)
+                        && !task.getClosedAt().isAfter(endDate))
                 .collect(Collectors.toList());
-        
+
+        // Obtener completions (evidencias) para estas tareas
+        Set<String> completedTaskIds = completedTasks.stream()
+                .map(TaskEntity::getId)
+                .collect(Collectors.toSet());
+
+        List<TaskCompletionEntity> completions = completionRepo.findByTaskIdIn(completedTaskIds);
+
         ReportSummary summary = generateSummary(completedTasks, completions, allTasks);
         List<ReportTaskDetail> taskDetails = generateTaskDetails(completedTasks, completions);
-        
-        // Cargar todos los usuarios y tableros disponibles
+
         List<AvailableUser> availableUsers = loadAvailableUsers();
         List<AvailableBoard> availableBoards = loadAvailableBoards();
-        
+
         return ReportDto.builder()
                 .reportId(UUID.randomUUID().toString())
                 .reportType(reportType)
@@ -79,30 +84,32 @@ public class ReportService {
 
     public ReportDto generateUserReport(String userId, LocalDateTime startDate, LocalDateTime endDate) {
         logger.info("📊 Generando reporte de usuario {} para {}-{}", userId, startDate, endDate);
-        
-        List<TaskCompletionEntity> completions = completionRepo.findByCompletedAtBetween(startDate, endDate)
-                .stream()
-                .filter(c -> c.getCompletedBy().equals(userId))
-                .collect(Collectors.toList());
-        
+
+        // Todas las tareas asignadas al usuario
         List<TaskEntity> allTasks = taskRepo.findAll().stream()
                 .filter(t -> t.getAssignedTo() != null && t.getAssignedTo().contains(userId))
                 .collect(Collectors.toList());
-        
-        Set<String> completedTaskIds = completions.stream()
-                .map(TaskCompletionEntity::getTaskId)
-                .collect(Collectors.toSet());
-        
+
+        // Solo las CERRADAS en el rango de fechas
         List<TaskEntity> completedTasks = allTasks.stream()
-                .filter(task -> completedTaskIds.contains(task.getId()))
+                .filter(task -> "CERRADO".equals(task.getStatus()))
+                .filter(task -> task.getClosedAt() != null
+                        && !task.getClosedAt().isBefore(startDate)
+                        && !task.getClosedAt().isAfter(endDate))
                 .collect(Collectors.toList());
-        
+
+        Set<String> completedTaskIds = completedTasks.stream()
+                .map(TaskEntity::getId)
+                .collect(Collectors.toSet());
+
+        List<TaskCompletionEntity> completions = completionRepo.findByTaskIdIn(completedTaskIds);
+
         ReportSummary summary = generateSummary(completedTasks, completions, allTasks);
         List<ReportTaskDetail> taskDetails = generateTaskDetails(completedTasks, completions);
-        
+
         List<AvailableUser> availableUsers = loadAvailableUsers();
         List<AvailableBoard> availableBoards = loadAvailableBoards();
-        
+
         return ReportDto.builder()
                 .reportId(UUID.randomUUID().toString())
                 .reportType("BY_USER")
@@ -118,30 +125,30 @@ public class ReportService {
 
     public ReportDto generateBoardReport(String boardId, LocalDateTime startDate, LocalDateTime endDate) {
         logger.info("📊 Generando reporte de tablero {} para {}-{}", boardId, startDate, endDate);
-        
-        List<TaskEntity> boardTasks = taskRepo.findAll().stream()
-                .filter(t -> t.getBoardId().equals(boardId))
-                .collect(Collectors.toList());
-        
-        List<TaskCompletionEntity> completions = completionRepo.findByCompletedAtBetween(startDate, endDate)
-                .stream()
-                .filter(c -> c.getBoardId().equals(boardId))
-                .collect(Collectors.toList());
-        
-        Set<String> completedTaskIds = completions.stream()
-                .map(TaskCompletionEntity::getTaskId)
-                .collect(Collectors.toSet());
-        
+
+        // Todas las tareas del board
+        List<TaskEntity> boardTasks = taskRepo.findByBoardId(boardId);
+
+        // Solo las CERRADAS en el rango de fechas
         List<TaskEntity> completedTasks = boardTasks.stream()
-                .filter(task -> completedTaskIds.contains(task.getId()))
+                .filter(task -> "CERRADO".equals(task.getStatus()))
+                .filter(task -> task.getClosedAt() != null
+                        && !task.getClosedAt().isBefore(startDate)
+                        && !task.getClosedAt().isAfter(endDate))
                 .collect(Collectors.toList());
-        
+
+        Set<String> completedTaskIds = completedTasks.stream()
+                .map(TaskEntity::getId)
+                .collect(Collectors.toSet());
+
+        List<TaskCompletionEntity> completions = completionRepo.findByTaskIdIn(completedTaskIds);
+
         ReportSummary summary = generateSummary(completedTasks, completions, boardTasks);
         List<ReportTaskDetail> taskDetails = generateTaskDetails(completedTasks, completions);
-        
+
         List<AvailableUser> availableUsers = loadAvailableUsers();
         List<AvailableBoard> availableBoards = loadAvailableBoards();
-        
+
         return ReportDto.builder()
                 .reportId(UUID.randomUUID().toString())
                 .reportType("BY_BOARD")
@@ -157,10 +164,10 @@ public class ReportService {
 
     public ReportDto generateDashboard() {
         logger.info("📊 Generando dashboard (últimos 30 días)");
-        
+
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime thirtyDaysAgo = now.minusDays(30);
-        
+
         return generateReport(thirtyDaysAgo, now, "DASHBOARD");
     }
 
@@ -188,7 +195,7 @@ public class ReportService {
                 .filter(board -> "ACTIVE".equals(board.getStatus()))
                 .map(board -> {
                     long taskCount = taskRepo.findByBoardId(board.getId()).size();
-                    
+
                     return AvailableBoard.builder()
                             .boardId(board.getId())
                             .boardName(board.getTitle())
@@ -200,16 +207,16 @@ public class ReportService {
                 .collect(Collectors.toList());
     }
 
-    private ReportSummary generateSummary(List<TaskEntity> completedTasks, 
-                                         List<TaskCompletionEntity> completions,
-                                         List<TaskEntity> allTasks) {
+    private ReportSummary generateSummary(List<TaskEntity> completedTasks,
+            List<TaskCompletionEntity> completions,
+            List<TaskEntity> allTasks) {
         int totalEvidences = completions.stream()
                 .mapToInt(c -> c.getImageUrls() != null ? c.getImageUrls().size() : 0)
                 .sum();
-        
+
         List<UserPerformance> userPerformance = calculateUserPerformance(completions, completedTasks);
         List<BoardStatistics> boardStats = calculateBoardStatistics(allTasks, completedTasks);
-        
+
         return ReportSummary.builder()
                 .totalTasks(allTasks.size())
                 .completedTasks(completedTasks.size())
@@ -221,28 +228,32 @@ public class ReportService {
     }
 
     private List<UserPerformance> calculateUserPerformance(List<TaskCompletionEntity> completions,
-                                                           List<TaskEntity> completedTasks) {
+            List<TaskEntity> completedTasks) {
+        // Agrupar completaciones por usuario que las completó
         Map<String, List<TaskCompletionEntity>> completionsByUser = completions.stream()
                 .collect(Collectors.groupingBy(TaskCompletionEntity::getCompletedBy));
-        
+
         return completionsByUser.entrySet().stream()
                 .map(entry -> {
                     String userId = entry.getKey();
                     List<TaskCompletionEntity> userCompletions = entry.getValue();
-                    
+
+                    // Obtener información del usuario
                     UserEntity user = userRepo.findById(userId).orElse(null);
                     String userName = user != null ? user.getName() + " " + user.getLastname() : "Usuario desconocido";
-                    
+
+                    // Contar evidencias proporcionadas por este usuario
                     int evidences = userCompletions.stream()
                             .mapToInt(c -> c.getImageUrls() != null ? c.getImageUrls().size() : 0)
                             .sum();
-                    
-                    double avgTime = calculateAverageCompletionTime(userCompletions, completedTasks);
-                    
+
+                    // Calcular tiempo promedio solo para las tareas de este usuario
+                    double avgTime = calculateAverageCompletionTimeForUser(userCompletions, completedTasks);
+
                     return UserPerformance.builder()
                             .userId(userId)
                             .userName(userName)
-                            .tasksCompleted(userCompletions.size())
+                            .tasksCompleted(userCompletions.size()) // Cantidad de tareas que ESTE usuario completó
                             .evidencesProvided(evidences)
                             .averageCompletionTime(avgTime)
                             .build();
@@ -251,11 +262,32 @@ public class ReportService {
                 .collect(Collectors.toList());
     }
 
-    private double calculateAverageCompletionTime(List<TaskCompletionEntity> completions, 
-                                                  List<TaskEntity> tasks) {
+    // Método auxiliar para calcular tiempo promedio por usuario
+    private double calculateAverageCompletionTimeForUser(List<TaskCompletionEntity> userCompletions,
+            List<TaskEntity> tasks) {
         Map<String, TaskEntity> taskMap = tasks.stream()
                 .collect(Collectors.toMap(TaskEntity::getId, t -> t));
-        
+
+        List<Long> durations = userCompletions.stream()
+                .filter(c -> taskMap.containsKey(c.getTaskId()))
+                .map(c -> {
+                    TaskEntity task = taskMap.get(c.getTaskId());
+                    return Duration.between(task.getCreatedAt(), c.getCompletedAt()).toHours();
+                })
+                .collect(Collectors.toList());
+
+        return durations.isEmpty() ? 0
+                : durations.stream()
+                        .mapToLong(Long::longValue)
+                        .average()
+                        .orElse(0);
+    }
+
+    private double calculateAverageCompletionTime(List<TaskCompletionEntity> completions,
+            List<TaskEntity> tasks) {
+        Map<String, TaskEntity> taskMap = tasks.stream()
+                .collect(Collectors.toMap(TaskEntity::getId, t -> t));
+
         List<Long> durations = completions.stream()
                 .filter(c -> taskMap.containsKey(c.getTaskId()))
                 .map(c -> {
@@ -263,37 +295,37 @@ public class ReportService {
                     return Duration.between(task.getCreatedAt(), c.getCompletedAt()).toHours();
                 })
                 .collect(Collectors.toList());
-        
-        return durations.isEmpty() ? 0 : durations.stream()
-                .mapToLong(Long::longValue)
-                .average()
-                .orElse(0);
+
+        return durations.isEmpty() ? 0
+                : durations.stream()
+                        .mapToLong(Long::longValue)
+                        .average()
+                        .orElse(0);
     }
 
-    private List<BoardStatistics> calculateBoardStatistics(List<TaskEntity> allTasks, 
-                                                           List<TaskEntity> completedTasks) {
+    private List<BoardStatistics> calculateBoardStatistics(List<TaskEntity> allTasks,
+            List<TaskEntity> completedTasks) {
         Map<String, List<TaskEntity>> tasksByBoard = allTasks.stream()
                 .collect(Collectors.groupingBy(TaskEntity::getBoardId));
-        
+
         Set<String> completedTaskIds = completedTasks.stream()
                 .map(TaskEntity::getId)
                 .collect(Collectors.toSet());
-        
+
         return tasksByBoard.entrySet().stream()
                 .map(entry -> {
                     String boardId = entry.getKey();
                     List<TaskEntity> boardTasks = entry.getValue();
-                    
+
                     BoardEntity board = boardRepo.findById(boardId).orElse(null);
                     String boardName = board != null ? board.getTitle() : "Tablero desconocido";
-                    
+
                     long completed = boardTasks.stream()
                             .filter(task -> completedTaskIds.contains(task.getId()))
                             .count();
-                    
-                    double completionRate = boardTasks.isEmpty() ? 0 : 
-                            (double) completed / boardTasks.size() * 100;
-                    
+
+                    double completionRate = boardTasks.isEmpty() ? 0 : (double) completed / boardTasks.size() * 100;
+
                     return BoardStatistics.builder()
                             .boardId(boardId)
                             .boardName(boardName)
@@ -306,18 +338,19 @@ public class ReportService {
                 .collect(Collectors.toList());
     }
 
-    private List<ReportTaskDetail> generateTaskDetails(List<TaskEntity> tasks, 
-                                                       List<TaskCompletionEntity> completions) {
+    private List<ReportTaskDetail> generateTaskDetails(List<TaskEntity> tasks,
+            List<TaskCompletionEntity> completions) {
         Map<String, TaskCompletionEntity> completionMap = completions.stream()
                 .collect(Collectors.toMap(TaskCompletionEntity::getTaskId, c -> c, (c1, c2) -> c1));
-        
+
         return tasks.stream()
                 .map(task -> {
                     TaskCompletionEntity completion = completionMap.get(task.getId());
-                    
+
                     BoardEntity board = boardRepo.findById(task.getBoardId()).orElse(null);
                     String boardName = board != null ? board.getTitle() : "Tablero desconocido";
-                    
+
+                    // Usuarios asignados a la tarea
                     List<String> assignedUserNames = new ArrayList<>();
                     if (task.getAssignedTo() != null) {
                         assignedUserNames = task.getAssignedTo().stream()
@@ -327,27 +360,33 @@ public class ReportService {
                                 })
                                 .collect(Collectors.toList());
                     }
-                    
+
+                    // Usuario que COMPLETÓ la tarea (viene de TaskCompletion, NO de TaskEntity)
                     String completedByName = "";
+                    String completedById = null;
                     if (completion != null) {
+                        completedById = completion.getCompletedBy(); // 👈 ID del que completó
                         UserEntity user = userRepo.findById(completion.getCompletedBy()).orElse(null);
-                        completedByName = user != null ? user.getName() + " " + user.getLastname() : "Usuario desconocido";
+                        completedByName = user != null ? user.getName() + " " + user.getLastname()
+                                : "Usuario desconocido";
                     }
-                    
+
                     return ReportTaskDetail.builder()
                             .taskId(task.getId())
                             .taskTitle(task.getTitle())
                             .boardName(boardName)
                             .priority(task.getPriority())
-                            .status(completion != null ? "COMPLETED" : "PENDING")
+                            .status(task.getStatus() != null ? task.getStatus()
+                                    : (completion != null ? "CERRADO" : "ABIERTO"))
                             .createdAt(task.getCreatedAt())
                             .completedAt(completion != null ? completion.getCompletedAt() : null)
-                            .completedBy(completion != null ? completion.getCompletedBy() : null)
-                            .completedByName(completedByName)
+                            .completedBy(completedById) // 👈 ID del que completó (de la completion)
+                            .completedByName(completedByName) // 👈 Nombre del que completó (de la completion)
                             .completionDescription(completion != null ? completion.getDescription() : null)
                             .completionNotes(completion != null ? completion.getNotes() : null)
                             .evidenceUrls(completion != null ? completion.getImageUrls() : new ArrayList<>())
-                            .assignedUsers(assignedUserNames)
+                            .assignedUsers(assignedUserNames) // 👈 Usuarios asignados (pueden ser diferentes al que
+                                                              // completó)
                             .build();
                 })
                 .sorted(Comparator.comparing(ReportTaskDetail::getCreatedAt).reversed())
