@@ -10,4 +10,5 @@ import com.fiberplus.main.entities.TaskEntity;
 @Repository
 public interface ITaskRepository extends MongoRepository<TaskEntity, String> {
     List<TaskEntity> findByBoardId(String id);
+    List<TaskEntity> findByBoardIdIn(List<String> boardIds);
 }
